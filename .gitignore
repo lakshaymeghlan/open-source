@@ -1,0 +1,145 @@
+# ------------------------------------------------------------
+# 🔧 GENERAL
+# ------------------------------------------------------------
+node_modules/
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# build artifacts
+dist/
+build/
+.next/
+out/
+.cache/
+.vercel/
+.render/
+.tmp/
+temp/
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ------------------------------------------------------------
+# 🧠 FRONTEND (Next.js + Bolt.new)
+# ------------------------------------------------------------
+frontend/.next/
+frontend/out/
+frontend/node_modules/
+frontend/.vercel/
+frontend/.cache/
+frontend/.turbo/
+frontend/.bolt/
+frontend/temp/
+frontend/.env*
+
+# Next.js specific
+.next/
+out/
+*.next/
+*.out/
+.next/cache/
+out/cache/
+
+# Bolt.new
+bolt.config.json
+*.bolt-preview.json
+
+# compiled static files
+frontend/public/build/
+frontend/public/static/
+
+# ------------------------------------------------------------
+# 🖥️ BACKEND (Node.js + Express + MongoDB)
+# ------------------------------------------------------------
+backend/node_modules/
+backend/.env
+backend/.env.local
+backend/dist/
+backend/build/
+backend/temp/
+backend/logs/
+backend/.cache/
+
+# Debug / runtime
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+backend/*.log
+
+# pm2 / nodemon / logs
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# database dumps
+*.sql
+*.sqlite
+*.sqlite3
+dump.rdb
+*.bson
+*.jsonl
+mongo_data/
+
+# ------------------------------------------------------------
+# 🧪 TESTING / COVERAGE
+# ------------------------------------------------------------
+coverage/
+.nyc_output/
+jest-html-reporters-*
+test-results/
+__tests__/output/
+__snapshots__/
+.vitest/
+*.test.js
+*.spec.js
+
+# ------------------------------------------------------------
+# ⚙️ EDITORS / OS FILES
+# ------------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+*.code-workspace
+*.sublime-project
+*.sublime-workspace
+
+# ------------------------------------------------------------
+# 🚀 DEPLOYMENT / CLOUD
+# ------------------------------------------------------------
+.vercel/
+.netlify/
+render.yaml
+Dockerfile
+docker-compose.yml
+*.dockerignore
+
+# ------------------------------------------------------------
+# ⚡ MISCELLANEOUS
+# ------------------------------------------------------------
+*.tgz
+*.tar
+*.zip
+*.bak
+*.tmp
+*.orig
+*.rej
+*.seed
+*.map
+*.lock
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# optional if using lockfiles — uncomment to keep:
+# !package-lock.json
+# !yarn.lock
+# !pnpm-lock.yaml
