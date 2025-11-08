@@ -3,20 +3,30 @@ import asyncHandler from "express-async-handler";
 import { fetchGitHubProjects } from "../services/github.service.js";
 
 /**
- * Protected endpoint to trigger sync.
- * Accepts { language: "javascript" } in body. If not provided, syncs a default list.
+ * Protected endpoint to trigger GitHub sync.
+ *
+ * Body:
+ *  { languages: ["javascript", "python"], totalToFetch: 500, perPage: 100, delayMs: 700 }
+ *
+ * Loops through languages sequentially and returns results.
  */
 export const syncProjects = asyncHandler(async (req, res) => {
-  const { language } = req.body;
+  const { languages, language, totalToFetch = 300, perPage = 100, delayMs = 700 } = req.body;
 
-  // Optionally check admin permission - for now we allow any authenticated user.
-  const langs = language ? [language] : ["javascript", "python", "typescript", "go", "java"];
+  const langs = Array.isArray(languages) ? languages : language ? [language] : ["javascript"];
+  const results = [];
 
   for (const lang of langs) {
-    // fetchGitHubProjects handles upsert
-    // eslint-disable-next-line no-await-in-loop
-    await fetchGitHubProjects(lang);
+    try {
+      console.log(`Triggering full sync for language=${lang} totalToFetch=${totalToFetch}`);
+      // eslint-disable-next-line no-await-in-loop
+      const synced = await fetchGitHubProjects(lang, Number(totalToFetch), Number(perPage), Number(delayMs));
+      results.push({ language: lang, status: "ok", syncedCount: synced.length });
+    } catch (err) {
+      console.error(`Sync error for ${lang}:`, err.message || err);
+      results.push({ language: lang, status: "error", message: err.message || String(err) });
+    }
   }
 
-  res.json({ message: "Sync triggered", languages: langs });
+  res.json({ message: "Full sync finished", results });
 });

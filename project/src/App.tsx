@@ -1,33 +1,44 @@
-import { useState, useEffect } from 'react';
-import Header from './components/Header';
-import MobileNav from './components/MobileNav';
-import Home from './pages/Home';
-import Profile from './pages/Profile';
-import ProjectDetail from './pages/ProjectDetail';
-import AuthModal from './components/AuthModal';
-import Toast from './components/Toast';
-import { Project } from './components/ProjectCard';
-import { mockProjects } from './data/mockData';
+// src/App.tsx
+import { useState, useEffect } from "react";
+import Header from "./components/Header";
+import MobileNav from "./components/MobileNav";
+import Home from "./pages/Home";
+import Profile from "./pages/Profile";
+import ProjectDetail from "./pages/ProjectDetail";
+import AuthModal from "./components/AuthModal";
+import Toast from "./components/Toast";
+import { Project } from "./components/ProjectCard";
+import { AuthProvider, useAuth } from "./lib/auth";
+import { addBookmark as apiAddBookmark } from "./lib/api";
 
-function App() {
-  const [activeView, setActiveView] = useState<'explore' | 'profile'>('explore');
+/**
+ * InnerApp is the actual app UI wrapped by AuthProvider in default export below.
+ * Keeping auth logic inside the inner component makes it simpler to use useAuth() if needed.
+ */
+function InnerApp() {
+  const [activeView, setActiveView] = useState<"explore" | "profile">("explore");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isProjectDetailOpen, setIsProjectDetailOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
   const [darkMode, setDarkMode] = useState(true);
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info'; isVisible: boolean }>({
-    message: '',
-    type: 'success',
-    isVisible: false
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error" | "info";
+    isVisible: boolean;
+  }>({
+    message: "",
+    type: "success",
+    isVisible: false,
   });
-  const [projects, setProjects] = useState(mockProjects);
+
+  const { user } = useAuth(); // will be null when not logged in
 
   useEffect(() => {
     if (darkMode) {
-      document.documentElement.classList.add('dark');
+      document.documentElement.classList.add("dark");
     } else {
-      document.documentElement.classList.remove('dark');
+      document.documentElement.classList.remove("dark");
     }
   }, [darkMode]);
 
@@ -36,24 +47,36 @@ function App() {
     setIsProjectDetailOpen(true);
   };
 
-  const handleBookmark = (projectId: string) => {
-    setProjects((prev) =>
-      prev.map((p) =>
-        p.id === projectId ? { ...p, isBookmarked: !p.isBookmarked } : p
-      )
-    );
+  /**
+   * handleBookmark:
+   * - If user not logged in: open auth modal
+   * - If logged in: call backend addBookmark endpoint (API will ignore duplicates)
+   *
+   * Note: Profile page has a remove bookmark flow (calls remove endpoint).
+   * Here we implement the "add bookmark" flow from Explore / ProjectCard.
+   */
+  const handleBookmark = async (projectId: string) => {
+    if (!user) {
+      setAuthMode("signin");
+      setIsAuthModalOpen(true);
+      return;
+    }
 
-    const project = projects.find((p) => p.id === projectId);
-    if (project) {
-      showToast(
-        project.isBookmarked ? 'Removed from bookmarks' : 'Added to bookmarks',
-        'success'
-      );
+    try {
+      await apiAddBookmark(projectId);
+      showToast("Added to bookmarks", "success");
+      // Optionally, you may emit an event or update a shared store to refresh lists
+      // For simplicity, we let Home/Profile re-fetch their own data when needed.
+    } catch (err: any) {
+      console.error("Bookmark error:", err);
+      showToast(err?.message || "Failed to bookmark project", "error");
     }
   };
 
-  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+  const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
     setToast({ message, type, isVisible: true });
+    // auto-hide after 3s
+    setTimeout(() => setToast((prev) => ({ ...prev, isVisible: false })), 3000);
   };
 
   const hideToast = () => {
@@ -61,7 +84,7 @@ function App() {
   };
 
   const toggleAuthMode = () => {
-    setAuthMode((prev) => (prev === 'signin' ? 'signup' : 'signin'));
+    setAuthMode((prev) => (prev === "signin" ? "signup" : "signin"));
   };
 
   return (
@@ -75,7 +98,7 @@ function App() {
       />
 
       <div className="pb-16 lg:pb-0">
-        {activeView === 'explore' ? (
+        {activeView === "explore" ? (
           <Home onProjectClick={handleProjectClick} onBookmark={handleBookmark} />
         ) : (
           <Profile onProjectClick={handleProjectClick} onBookmark={handleBookmark} />
@@ -84,8 +107,8 @@ function App() {
 
       <div className="lg:hidden">
         <MobileNav
-          activeView={activeView === 'explore' ? 'explore' : 'profile'}
-          onViewChange={(view) => setActiveView(view as 'explore' | 'profile')}
+          activeView={activeView === "explore" ? "explore" : "profile"}
+          onViewChange={(view) => setActiveView(view as "explore" | "profile")}
         />
       </div>
 
@@ -102,14 +125,19 @@ function App() {
         onToggleMode={toggleAuthMode}
       />
 
-      <Toast
-        message={toast.message}
-        type={toast.type}
-        isVisible={toast.isVisible}
-        onClose={hideToast}
-      />
+      <Toast message={toast.message} type={toast.type} isVisible={toast.isVisible} onClose={hideToast} />
     </div>
   );
 }
 
-export default App;
+/**
+ * Wrap InnerApp with AuthProvider here so useAuth() works inside the component tree.
+ * If you already wrap at a higher level (like main.tsx), you can export InnerApp directly.
+ */
+export default function App() {
+  return (
+    <AuthProvider>
+      <InnerApp />
+    </AuthProvider>
+  );
+}
