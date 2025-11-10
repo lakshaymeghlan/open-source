@@ -1,58 +1,50 @@
-import { Sparkles, User, LogIn, Moon, Sun } from 'lucide-react';
-import Button from './Button';
+// src/components/Header.tsx
+import React from 'react';
+import { SunMoon } from 'lucide-react';
 
 interface HeaderProps {
+  user: any | null;
+  loadingProfile?: boolean;
   onAuthClick: () => void;
+  onLogout: () => void;
   darkMode: boolean;
   onDarkModeToggle: () => void;
-  activeView: 'explore' | 'profile';
-  onViewChange: (view: 'explore' | 'profile') => void;
+  activeView: string;
+  onViewChange: (v: string) => void;
 }
 
-export default function Header({ onAuthClick, darkMode, onDarkModeToggle, activeView, onViewChange }: HeaderProps) {
+export default function Header({ user, loadingProfile, onAuthClick, onLogout, darkMode, onDarkModeToggle, activeView, onViewChange }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-50 bg-[#0f1720]/95 backdrop-blur-sm border-b border-gray-800/50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
-          <button
-            onClick={() => onViewChange('explore')}
-            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
-          >
-            <Sparkles className="w-6 h-6 text-teal-400" />
-            <span className="text-lg font-bold text-gray-100 hidden sm:inline">
-              OS Discovery
-            </span>
+    <header className="w-full bg-[#071018] border-b border-gray-800/40">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <div className="text-teal-300 font-bold">OS Discovery</div>
+          <nav className="hidden md:flex gap-3 text-gray-400">
+            <button onClick={() => onViewChange('explore')} className={`px-3 py-2 rounded ${activeView === 'explore' ? 'text-teal-300' : 'hover:text-gray-200'}`}>Explore</button>
+            <button onClick={() => onViewChange('profile')} className={`px-3 py-2 rounded ${activeView === 'profile' ? 'text-teal-300' : 'hover:text-gray-200'}`}>Profile</button>
+          </nav>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button onClick={onDarkModeToggle} className="p-2 rounded hover:bg-gray-800/30">
+            <SunMoon className="w-5 h-5 text-gray-300" />
           </button>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onDarkModeToggle}
-              className="p-2 text-gray-400 hover:text-gray-200 hover:bg-[#1a2332] rounded-xl transition-all"
-            >
-              {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-            </button>
-
-            <div className="hidden lg:flex items-center gap-2">
-              <Button
-                variant={activeView === 'profile' ? 'primary' : 'ghost'}
-                size="sm"
-                icon={User}
-                onClick={() => onViewChange('profile')}
-              >
-                Profile
-              </Button>
-              <Button variant="secondary" size="sm" icon={LogIn} onClick={onAuthClick}>
-                Sign In
-              </Button>
+          {loadingProfile ? (
+            <div className="w-24 h-8 bg-gray-800/30 rounded-xl animate-pulse" />
+          ) : user ? (
+            <div className="flex items-center gap-3">
+              <button onClick={() => onViewChange('profile')} className="flex items-center gap-2 px-3 py-1 rounded-full bg-teal-600/10 hover:bg-teal-600/20">
+                <img src={user.avatar || '/default-avatar.png'} alt={user.name || user.email} className="w-6 h-6 rounded-full border border-gray-700" />
+                <span className="text-sm text-gray-200 hidden sm:block">{user.name ?? user.username ?? 'Profile'}</span>
+              </button>
+              <button onClick={onLogout} className="px-3 py-1 rounded bg-gray-800/60 hover:bg-red-600/20 text-gray-300">Logout</button>
             </div>
-
-            <button
-              onClick={onAuthClick}
-              className="lg:hidden p-2 text-gray-400 hover:text-gray-200 hover:bg-[#1a2332] rounded-xl transition-all"
-            >
-              <LogIn className="w-5 h-5" />
-            </button>
-          </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button onClick={onAuthClick} className="px-3 py-1 rounded bg-teal-600 text-black font-medium hover:opacity-90">Sign In</button>
+            </div>
+          )}
         </div>
       </div>
     </header>

@@ -4,38 +4,36 @@ import Card from "../components/Card";
 import Chip from "../components/Chip";
 import ProjectCard, { Project as UIProject } from "../components/ProjectCard";
 import { Award, Bookmark, GitPullRequest } from "lucide-react";
-import { fetchProfile, removeBookmark as apiRemoveBookmark } from "../lib/api";
+import { removeBookmark as apiRemoveBookmark } from "../lib/api";
 import { BackendProject, mapBackendProject } from "../lib/types";
 
 interface ProfileProps {
+  user: any | null;
   onProjectClick: (project: UIProject) => void;
   onBookmark: (projectId: string) => void;
 }
 
-export default function Profile({ onProjectClick, onBookmark }: ProfileProps) {
-  const [profile, setProfile] = useState<any | null>(null);
+export default function Profile({ user, onProjectClick, onBookmark }: ProfileProps) {
   const [bookmarkedProjects, setBookmarkedProjects] = useState<UIProject[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // When user changes (login/logout), map their bookmarks into UIProject objects
   useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      setLoading(true);
-      try {
-        const data = await fetchProfile();
-        if (!mounted) return;
-        setProfile(data);
-        const b = (data.bookmarks || []) as BackendProject[];
-        setBookmarkedProjects(b.map(mapBackendProject));
-      } catch (err) {
-        console.error(err);
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
-    load();
-    return () => { mounted = false; };
-  }, []);
+    if (!user) {
+      setBookmarkedProjects([]);
+      return;
+    }
+    setLoading(true);
+    try {
+      const b = (user.bookmarks || []) as BackendProject[];
+      setBookmarkedProjects(b.map(mapBackendProject));
+    } catch (err) {
+      console.error("Failed to map bookmarks:", err);
+      setBookmarkedProjects([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
 
   const handleRemoveBookmark = async (projectId: string) => {
     try {
@@ -46,25 +44,38 @@ export default function Profile({ onProjectClick, onBookmark }: ProfileProps) {
     }
   };
 
-  const contributionProjects = []; // optionally fetch contributions if implemented
+  const contributionProjects = []; // TODO: fetch contributions if implemented
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-[#0b0f14]">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="text-center text-gray-300">
+            <h2 className="text-2xl font-bold mb-2">You are not signed in</h2>
+            <p className="text-gray-500">Sign in to see your bookmarks and contribution activity.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#0b0f14]">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <Card className="p-6 sm:p-8 mb-8">
           <div className="flex flex-col sm:flex-row items-start gap-6">
-            <img src={profile?.avatar || "/default-avatar.png"} alt={profile?.name} className="w-24 h-24 rounded-full border-2 border-gray-700" />
+            <img
+              src={user.avatar || "/default-avatar.png"}
+              alt={user.name || user.email}
+              className="w-24 h-24 rounded-full border-2 border-gray-700"
+            />
             <div className="flex-1 min-w-0">
-              <h1 className="text-3xl font-bold text-gray-100 mb-1">{profile?.name || "Your name"}</h1>
-              <p className="text-gray-400 mb-3">@{profile?.email?.split("@")?.[0] || "you"}</p>
-              <p className="text-gray-300 leading-relaxed mb-4">{profile?.bio || "Update your bio in settings"}</p>
-              <div>
-                <label className="block text-sm font-medium text-gray-400 mb-2">Preferred Technologies</label>
-                <div className="flex flex-wrap gap-2">
-                  {(profile?.preferredTechs || ["nodejs"]).map((tech: string) => (
-                    <Chip key={tech} label={tech} selected variant="tech" size="sm" />
-                  ))}
-                </div>
+              <h1 className="text-3xl font-bold text-gray-100 mb-1">{user.name || user.username}</h1>
+              <p className="text-gray-400 mb-3">@{(user.username) ?? user.email?.split("@")?.[0]}</p>
+              <p className="text-gray-300 leading-relaxed mb-4">{user.bio || "Update your bio in settings"}</p>
+              <div className="flex gap-2">
+                <a className="px-4 py-2 rounded-full bg-teal-600/10 text-teal-300" href="#">Edit profile</a>
+                <a className="px-4 py-2 rounded-full bg-gray-800/40 text-gray-300" href="#">Settings</a>
               </div>
             </div>
           </div>
@@ -75,9 +86,8 @@ export default function Profile({ onProjectClick, onBookmark }: ProfileProps) {
             <Award className="w-5 h-5 text-teal-400" />
             <h2 className="text-xl font-bold text-gray-100">Achievements</h2>
           </div>
-          {/* Achievements UI - keep as before or fetch real ones */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-            <div className="p-4 rounded-xl border text-center bg-teal-500/10 border-teal-500/50">
+            <div className="p-4 rounded-xl border text-center bg-teal-500/10 border-teal-500/30">
               <div className="text-2xl mb-2">🏆</div>
               <div className="text-sm font-medium text-gray-300">First Bookmark</div>
             </div>

@@ -13,7 +13,6 @@ import { addBookmark as apiAddBookmark } from "./lib/api";
 
 /**
  * InnerApp is the actual app UI wrapped by AuthProvider in default export below.
- * Keeping auth logic inside the inner component makes it simpler to use useAuth() if needed.
  */
 function InnerApp() {
   const [activeView, setActiveView] = useState<"explore" | "profile">("explore");
@@ -32,14 +31,12 @@ function InnerApp() {
     isVisible: false,
   });
 
-  const { user } = useAuth(); // will be null when not logged in
+  // get auth helpers from provider
+  const { user, logout, loading: loadingProfile } = useAuth();
 
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    if (darkMode) document.documentElement.classList.add("dark");
+    else document.documentElement.classList.remove("dark");
   }, [darkMode]);
 
   const handleProjectClick = (project: Project) => {
@@ -51,9 +48,6 @@ function InnerApp() {
    * handleBookmark:
    * - If user not logged in: open auth modal
    * - If logged in: call backend addBookmark endpoint (API will ignore duplicates)
-   *
-   * Note: Profile page has a remove bookmark flow (calls remove endpoint).
-   * Here we implement the "add bookmark" flow from Explore / ProjectCard.
    */
   const handleBookmark = async (projectId: string) => {
     if (!user) {
@@ -65,8 +59,7 @@ function InnerApp() {
     try {
       await apiAddBookmark(projectId);
       showToast("Added to bookmarks", "success");
-      // Optionally, you may emit an event or update a shared store to refresh lists
-      // For simplicity, we let Home/Profile re-fetch their own data when needed.
+      // let pages re-fetch their data as needed
     } catch (err: any) {
       console.error("Bookmark error:", err);
       showToast(err?.message || "Failed to bookmark project", "error");
@@ -75,7 +68,6 @@ function InnerApp() {
 
   const showToast = (message: string, type: "success" | "error" | "info" = "success") => {
     setToast({ message, type, isVisible: true });
-    // auto-hide after 3s
     setTimeout(() => setToast((prev) => ({ ...prev, isVisible: false })), 3000);
   };
 
@@ -87,10 +79,24 @@ function InnerApp() {
     setAuthMode((prev) => (prev === "signin" ? "signup" : "signin"));
   };
 
+  const handleLogout = async () => {
+    // call provider logout (clears token)
+    try {
+      await logout?.();
+    } catch (e) {
+      console.error("Logout error", e);
+    }
+    showToast("Logged out", "info");
+    // If you want to force a refresh of lists, you can do it here
+  };
+
   return (
     <div className="min-h-screen bg-[#0b0f14]">
       <Header
+        user={user}
+        loadingProfile={loadingProfile}
         onAuthClick={() => setIsAuthModalOpen(true)}
+        onLogout={handleLogout}
         darkMode={darkMode}
         onDarkModeToggle={() => setDarkMode(!darkMode)}
         activeView={activeView}
@@ -101,7 +107,7 @@ function InnerApp() {
         {activeView === "explore" ? (
           <Home onProjectClick={handleProjectClick} onBookmark={handleBookmark} />
         ) : (
-          <Profile onProjectClick={handleProjectClick} onBookmark={handleBookmark} />
+          <Profile user={user} onProjectClick={handleProjectClick} onBookmark={handleBookmark} />
         )}
       </div>
 
@@ -132,7 +138,6 @@ function InnerApp() {
 
 /**
  * Wrap InnerApp with AuthProvider here so useAuth() works inside the component tree.
- * If you already wrap at a higher level (like main.tsx), you can export InnerApp directly.
  */
 export default function App() {
   return (

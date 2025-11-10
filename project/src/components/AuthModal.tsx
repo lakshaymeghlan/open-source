@@ -72,7 +72,7 @@ export default function AuthModal({ isOpen, onClose, mode, onToggleMode }: AuthM
             : "Join to start discovering and contributing to open-source projects"}
         </p>
 
-        <Button
+        {/* <Button
           variant="secondary"
           size="lg"
           icon={Github}
@@ -80,16 +80,16 @@ export default function AuthModal({ isOpen, onClose, mode, onToggleMode }: AuthM
           className="w-full mb-6"
         >
           Continue with GitHub
-        </Button>
+        </Button> */}
 
-        <div className="relative mb-6">
+        {/* <div className="relative mb-6">
           <div className="absolute inset-0 flex items-center">
             <div className="w-full border-t border-gray-800/50" />
           </div>
           <div className="relative flex justify-center text-sm">
             <span className="px-4 bg-[#0f1720] text-gray-500">Or continue with email</span>
           </div>
-        </div>
+        </div> */}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === "signup" && (
