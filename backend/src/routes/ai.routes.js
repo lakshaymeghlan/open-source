@@ -1,10 +1,13 @@
-// src/routes/ai.routes.js
 import express from "express";
-import { getContributionGuide } from "../controllers/ai.controller.js";
-// import { protect } from "../middlewares/auth.middleware.js"; // optional
+import { getContributionGuide, regenerateContributionGuide } from "../controllers/ai.controller.js";
+import { protect } from "../middlewares/auth.middleware.js";
+
 const router = express.Router();
 
-// GET /api/ai/contribution?projectId=...
+// Public: anyone can read guides
 router.get("/contribution", getContributionGuide);
+
+// Protected: only logged-in users can regenerate new ones
+router.post("/contribution/regenerate", protect, regenerateContributionGuide);
 
 export default router;

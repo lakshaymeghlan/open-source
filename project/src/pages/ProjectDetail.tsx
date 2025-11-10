@@ -35,13 +35,11 @@ export default function ProjectDetail({ project, isOpen, onClose }: ProjectDetai
       setGuide(null);
       setGuideError(null);
       try {
-        // Fetch up-to-date project from backend to get htmlUrl, topics, lastSyncedAt, etc.
         const res = await fetchProjectById(project.id);
         const mapped = mapBackendProject(res as BackendProject);
         if (mounted) setDetail(mapped);
       } catch (err) {
         console.error("Failed to load project detail:", err);
-        // fallback to passed project if backend fetch fails
         if (mounted) setDetail(project);
       } finally {
         if (mounted) setLoading(false);
@@ -53,7 +51,7 @@ export default function ProjectDetail({ project, isOpen, onClose }: ProjectDetai
     };
   }, [isOpen, project]);
 
-  // Fetch the AI contribution guide when modal opens and detail is available
+  // Fetch AI or fallback-generated contribution guide
   useEffect(() => {
     let mounted = true;
     const loadGuide = async () => {
@@ -62,7 +60,6 @@ export default function ProjectDetail({ project, isOpen, onClose }: ProjectDetai
       setGuideError(null);
       try {
         const res = await fetchContributionGuide(detail.id);
-        // Expected response: { cached: boolean, guide: { summary, meta, generatedAt } }
         if (!mounted) return;
         const g = res?.guide ?? null;
         setGuide(g);
@@ -86,17 +83,14 @@ export default function ProjectDetail({ project, isOpen, onClose }: ProjectDetai
     return String(num ?? 0);
   };
 
-  // repo links
   const repoFull = `${detail.owner}/${detail.name}`;
   const issuesUrl = `https://github.com/${repoFull}/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22`;
   const contributorsUrl = `https://github.com/${repoFull}/graphs/contributors`;
   const repoUrl = detail.htmlUrl || `https://github.com/${repoFull}`;
 
-  // Render markdown safely
   const renderMarkdown = (md: string) => {
     try {
       const html = marked(md || "");
-      // sanitize
       return { __html: DOMPurify.sanitize(html) };
     } catch {
       return { __html: DOMPurify.sanitize(String(md || "")) };
@@ -107,14 +101,23 @@ export default function ProjectDetail({ project, isOpen, onClose }: ProjectDetai
     <Modal isOpen={isOpen} onClose={onClose} size="xl">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
         <div className="lg:col-span-2 space-y-6">
+          {/* Project Header */}
           <div>
             <div className="flex items-start gap-4 mb-4">
-              <img src={detail.avatar} alt={detail.owner} className="w-16 h-16 rounded-full border-2 border-gray-700" />
+              <img
+                src={detail.avatar}
+                alt={detail.owner}
+                className="w-16 h-16 rounded-full border-2 border-gray-700"
+              />
               <div className="flex-1 min-w-0">
-                <h2 className="text-2xl font-bold text-gray-100 mb-2">{detail.owner}/{detail.name}</h2>
+                <h2 className="text-2xl font-bold text-gray-100 mb-2">
+                  {detail.owner}/{detail.name}
+                </h2>
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge label={detail.difficulty} difficulty={detail.difficulty} variant="difficulty" />
-                  {detail.techs.map((tech) => (<Chip key={tech} label={tech} variant="topic" size="sm" />))}
+                  {detail.techs.map((tech) => (
+                    <Chip key={tech} label={tech} variant="topic" size="sm" />
+                  ))}
                 </div>
               </div>
             </div>
@@ -122,23 +125,40 @@ export default function ProjectDetail({ project, isOpen, onClose }: ProjectDetai
             <p className="text-gray-300 leading-relaxed mb-4">{detail.description}</p>
 
             <div className="flex flex-wrap gap-3">
-              <Button variant="primary" icon={ExternalLink} onClick={() => window.open(repoUrl, "_blank")}>Open on GitHub</Button>
-              <Button variant="secondary" onClick={() => window.open(issuesUrl, "_blank")}>Good First Issues</Button>
+              <Button
+                variant="primary"
+                icon={ExternalLink}
+                onClick={() => window.open(repoUrl, "_blank")}
+              >
+                Open on GitHub
+              </Button>
+              <Button variant="secondary" onClick={() => window.open(issuesUrl, "_blank")}>
+                Good First Issues
+              </Button>
             </div>
           </div>
 
+          {/* README Preview */}
           <div className="border-t border-gray-800/50 pt-6">
             <h3 className="text-lg font-semibold text-gray-100 mb-4">README Preview</h3>
-            <div className="bg-[#0b0f14] rounded-xl border border-gray-800/50 p-6 prose prose-invert prose-sm max-w-none">
+            <div className="bg-[#0b0f14] rounded-xl border border-gray-800/50 p-6 prose prose-invert prose-sm max-w-none text-gray-200">
               <h1>About {detail.name}</h1>
               <p className="text-gray-400 leading-relaxed">{detail.description}</p>
               <h2>Getting Started</h2>
-              <p className="text-gray-400">To get started with this project, clone the repository and follow the installation instructions in the documentation. This project welcomes contributions from developers of all skill levels.</p>
+              <p className="text-gray-400">
+                To get started with this project, clone the repository and follow the installation
+                instructions in the documentation. This project welcomes contributions from developers
+                of all skill levels.
+              </p>
               <h2>Contributing</h2>
-              <p className="text-gray-400">We love contributions! Click the button above to view good first issues. Make sure to read contributing guidelines before submitting a pull request.</p>
+              <p className="text-gray-400">
+                We love contributions! Click the button above to view good first issues. Make sure to
+                read contributing guidelines before submitting a pull request.
+              </p>
             </div>
           </div>
 
+          {/* Contribution Guide */}
           <div className="border-t border-gray-800/50 pt-6">
             <h3 className="text-lg font-semibold text-gray-100 mb-4">Contribution Guide</h3>
 
@@ -152,33 +172,53 @@ export default function ProjectDetail({ project, isOpen, onClose }: ProjectDetai
                 </div>
               </div>
             ) : guide ? (
-              <div className="bg-[#0b0f14] rounded-xl border border-gray-800/50 p-6 prose prose-invert max-w-none">
+              <div
+                className="bg-[#0b0f14] rounded-xl border border-gray-800/50 p-6 prose prose-invert prose-sm max-w-none text-gray-200"
+                style={{
+                  color: "rgb(226 232 240)",
+                  ["--tw-prose-invert-body" as any]: "rgb(226 232 240)",
+                }}
+              >
                 <div dangerouslySetInnerHTML={renderMarkdown(guide.summary || "")} />
                 {guide.generatedAt && (
-                  <div className="text-xs text-gray-400 mt-3">Guide generated: {new Date(guide.generatedAt).toLocaleString()}</div>
+                  <div className="text-xs text-gray-400 mt-3">
+                    Guide generated: {new Date(guide.generatedAt).toLocaleString()}
+                  </div>
                 )}
-                {guide.meta && (
+                {guide.meta && guide.meta.quick && (
                   <div className="mt-3 text-xs text-gray-400">
-                    {/* show a compact quick summary if provided */}
-                    {guide.meta.quick && (
-                      <div>
-                        <strong className="text-gray-200">Quick:</strong>
-                        <div className="mt-1">
-                          <span className="mr-2">Difficulty suggestion: <strong className="text-gray-200">{guide.meta.quick.difficulty_suggestion ?? detail.difficulty}</strong></span>
-                        </div>
-                        <div className="mt-2">
-                          <span className="text-gray-400">Suggested tasks:</span>
-                          <ul className="mt-1 ml-4 list-disc text-gray-300">
-                            {(guide.meta.quick.suggested_tasks || []).slice(0, 5).map((t: any, idx: number) => (
-                              <li key={idx}>
-                                {t.title}{t.link ? (<a className="ml-2 text-teal-300 underline" href={t.link} target="_blank" rel="noreferrer">link</a>) : null}
-                                {t.est_minutes ? <span className="ml-2 text-xs text-gray-400">({t.est_minutes}m)</span> : null}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      </div>
-                    )}
+                    <strong className="text-gray-200">Quick:</strong>
+                    <div className="mt-1">
+                      <span className="mr-2">
+                        Difficulty suggestion:{" "}
+                        <strong className="text-gray-200">
+                          {guide.meta.quick.difficulty_suggestion ?? detail.difficulty}
+                        </strong>
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <span className="text-gray-400">Suggested tasks:</span>
+                      <ul className="mt-1 ml-4 list-disc text-gray-300">
+                        {(guide.meta.quick.suggested_tasks || []).slice(0, 5).map((t: any, idx: number) => (
+                          <li key={idx}>
+                            {t.title}
+                            {t.link && (
+                              <a
+                                className="ml-2 text-teal-300 underline"
+                                href={t.link}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                link
+                              </a>
+                            )}
+                            {t.est_minutes && (
+                              <span className="ml-2 text-xs text-gray-400">({t.est_minutes}m)</span>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
                   </div>
                 )}
               </div>
@@ -193,14 +233,26 @@ export default function ProjectDetail({ project, isOpen, onClose }: ProjectDetai
             )}
           </div>
 
+          {/* Open Issues */}
           <div className="border-t border-gray-800/50 pt-6">
             <h3 className="text-lg font-semibold text-gray-100 mb-4">Top Open Issues</h3>
             <div className="space-y-3">
-              <a href={issuesUrl} target="_blank" rel="noopener noreferrer" className="block bg-[#0b0f14] rounded-xl border border-gray-800/50 p-4 hover:border-teal-500/30 transition-all">
+              <a
+                href={issuesUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block bg-[#0b0f14] rounded-xl border border-gray-800/50 p-4 hover:border-teal-500/30 transition-all"
+              >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <h4 className="text-gray-200 font-medium mb-2 hover:text-teal-400 transition-colors">Open issues (view on GitHub)</h4>
-                    <div className="flex flex-wrap gap-2"><span className="px-2 py-0.5 bg-[#1a2332] text-gray-400 text-xs rounded-full border border-gray-700/50">good-first-issues</span></div>
+                    <h4 className="text-gray-200 font-medium mb-2 hover:text-teal-400 transition-colors">
+                      Open issues (view on GitHub)
+                    </h4>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="px-2 py-0.5 bg-[#1a2332] text-gray-400 text-xs rounded-full border border-gray-700/50">
+                        good-first-issues
+                      </span>
+                    </div>
                   </div>
                   <ExternalLink className="w-4 h-4 text-gray-500 flex-shrink-0" />
                 </div>
@@ -208,39 +260,36 @@ export default function ProjectDetail({ project, isOpen, onClose }: ProjectDetai
             </div>
           </div>
 
+          {/* Contributors */}
           <div className="border-t border-gray-800/50 pt-6">
             <h3 className="text-lg font-semibold text-gray-100 mb-4">Top Contributors</h3>
             <div className="mb-3 text-sm text-gray-400">View contributors on GitHub</div>
             <div>
-              <Button variant="secondary" onClick={() => window.open(contributorsUrl, "_blank")}>Open Contributors</Button>
+              <Button variant="secondary" onClick={() => window.open(contributorsUrl, "_blank")}>
+                Open Contributors
+              </Button>
             </div>
           </div>
         </div>
 
+        {/* Sidebar */}
         <aside className="lg:col-span-1">
           <div className="sticky top-6 space-y-6">
             <div className="bg-[#0b0f14] rounded-xl border border-gray-800/50 p-5">
               <h3 className="text-sm font-semibold text-gray-400 mb-4">Project Stats</h3>
               <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-gray-400"><Star className="w-4 h-4" /><span className="text-sm">Stars</span></div>
-                  <span className="text-gray-200 font-semibold">{formatNumber(detail.stars)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-gray-400"><GitFork className="w-4 h-4" /><span className="text-sm">Forks</span></div>
-                  <span className="text-gray-200 font-semibold">{formatNumber(detail.forks)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-gray-400"><AlertCircle className="w-4 h-4" /><span className="text-sm">Open Issues</span></div>
-                  <span className="text-gray-200 font-semibold">{detail.openIssues}</span>
-                </div>
+                <Stat label="Stars" value={formatNumber(detail.stars)} icon={<Star className="w-4 h-4" />} />
+                <Stat label="Forks" value={formatNumber(detail.forks)} icon={<GitFork className="w-4 h-4" />} />
+                <Stat label="Open Issues" value={detail.openIssues} icon={<AlertCircle className="w-4 h-4" />} />
               </div>
             </div>
 
             <div className="bg-[#0b0f14] rounded-xl border border-gray-800/50 p-5">
               <h3 className="text-sm font-semibold text-gray-400 mb-4">Topics</h3>
               <div className="flex flex-wrap gap-2">
-                {detail.techs.map((tech) => (<Chip key={tech} label={tech} variant="topic" size="sm" />))}
+                {detail.techs.map((tech) => (
+                  <Chip key={tech} label={tech} variant="topic" size="sm" />
+                ))}
                 <Chip label="open-source" variant="topic" size="sm" />
                 <Chip label="beginner-friendly" variant="topic" size="sm" />
               </div>
@@ -249,12 +298,28 @@ export default function ProjectDetail({ project, isOpen, onClose }: ProjectDetai
             <div className="bg-[#0b0f14] rounded-xl border border-gray-800/50 p-5">
               <div className="flex items-center gap-2 text-gray-400 text-xs">
                 <Calendar className="w-4 h-4" />
-                <span>Last synced: {detail.lastSyncedAt ? new Date(detail.lastSyncedAt).toLocaleString() : "Unknown"}</span>
+                <span>
+                  Last synced:{" "}
+                  {detail.lastSyncedAt ? new Date(detail.lastSyncedAt).toLocaleString() : "Unknown"}
+                </span>
               </div>
             </div>
           </div>
         </aside>
       </div>
     </Modal>
+  );
+}
+
+// helper for sidebar stats
+function Stat({ label, value, icon }: { label: string; value: string | number; icon: JSX.Element }) {
+  return (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2 text-gray-400">
+        {icon}
+        <span className="text-sm">{label}</span>
+      </div>
+      <span className="text-gray-200 font-semibold">{value}</span>
+    </div>
   );
 }
