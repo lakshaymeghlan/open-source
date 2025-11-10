@@ -8,6 +8,7 @@ import authRoutes from "./routes/auth.routes.js";
 import projectRoutes from "./routes/project.routes.js";
 import userRoutes from "./routes/user.routes.js";
 import githubRoutes from "./routes/github.routes.js";
+import aiRoutes from "./routes/ai.routes.js";
 
 dotenv.config();
 connectDB();
@@ -21,6 +22,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/github", githubRoutes);
+app.use("/api/ai", aiRoutes);
 
 app.use(errorHandler);
 export default app;

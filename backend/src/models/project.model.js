@@ -1,19 +1,27 @@
-import mongoose from "mongoose";
+// src/models/project.model.js (excerpt)
+import mongoose from 'mongoose';
 
-const projectSchema = new mongoose.Schema({
-  githubId: { type: String, unique: true },
+const ProjectSchema = new mongoose.Schema({
+  githubId: { type: Number, index: true, unique: true, sparse: true },
   name: String,
   fullName: String,
-  description: String,
   htmlUrl: String,
+  description: String,
   avatar: String,
-  techTags: [String],
-  difficulty: { type: String, enum: ["easy", "medium", "hard"] },
   stars: Number,
   forks: Number,
   openIssues: Number,
+  techTags: [String],
   topics: [String],
+  difficulty: String,
   lastSyncedAt: Date,
-});
+  // <-- new cached AI guide
+  contributionGuide: {
+    summary: { type: String, default: "" },   // human-readable output / markdown
+    meta: { type: mongoose.Schema.Types.Mixed }, // optional structured metadata
+    generatedAt: { type: Date }
+  }
+}, { timestamps: true });
 
-export default mongoose.model("Project", projectSchema);
+const Project = mongoose.model('Project', ProjectSchema);
+export default Project;

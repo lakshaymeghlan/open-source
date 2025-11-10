@@ -1,6 +1,7 @@
 // src/lib/api.ts
 export const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
+/* ---------- HELPERS ---------- */
 function getAuthHeaders() {
   const token = localStorage.getItem("token");
   return token ? { Authorization: `Bearer ${token}` } : {};
@@ -103,6 +104,31 @@ export async function fetchProjects({
 /* ---------- PROJECT DETAIL ---------- */
 export async function fetchProjectById(id: string) {
   const res = await fetch(`${API_BASE}/api/projects/${id}`);
+  return handleRes(res);
+}
+
+/* ---------- AI CONTRIBUTION GUIDE ---------- */
+/**
+ * Fetch AI-generated contribution guide (cached or new)
+ * Backend route: GET /api/ai/contribution?projectId=...
+ */
+export async function fetchContributionGuide(projectId: string) {
+  const res = await fetch(`${API_BASE}/api/ai/contribution?projectId=${projectId}`, {
+    headers: { ...getAuthHeaders() },
+  });
+  return handleRes(res);
+}
+
+/**
+ * Force regenerate contribution guide (fresh from AI)
+ * Backend route: POST /api/ai/contribution/regenerate
+ */
+export async function regenerateContributionGuide(projectId: string) {
+  const res = await fetch(`${API_BASE}/api/ai/contribution/regenerate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+    body: JSON.stringify({ projectId }),
+  });
   return handleRes(res);
 }
 

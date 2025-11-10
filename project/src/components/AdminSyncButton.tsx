@@ -65,7 +65,7 @@ export default function AdminSyncButton({ onComplete }: { onComplete?: () => voi
     <>
       <div>
         <Button variant="secondary" onClick={handleOpen} disabled={!allowed}>
-          Admin: Full Sync
+          Full Sync
         </Button>
       </div>
 
