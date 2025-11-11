@@ -6,6 +6,7 @@ import ProjectCard, { Project as UIProject } from "../components/ProjectCard";
 import { Award, Bookmark, GitPullRequest } from "lucide-react";
 import { removeBookmark as apiRemoveBookmark } from "../lib/api";
 import { BackendProject, mapBackendProject } from "../lib/types";
+import { useAuth } from "../lib/auth";
 
 interface ProfileProps {
   user: any | null;
@@ -16,6 +17,8 @@ interface ProfileProps {
 export default function Profile({ user, onProjectClick, onBookmark }: ProfileProps) {
   const [bookmarkedProjects, setBookmarkedProjects] = useState<UIProject[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const { refreshUser } = useAuth();
 
   // When user changes (login/logout), map their bookmarks into UIProject objects
   useEffect(() => {
@@ -38,13 +41,16 @@ export default function Profile({ user, onProjectClick, onBookmark }: ProfilePro
   const handleRemoveBookmark = async (projectId: string) => {
     try {
       await apiRemoveBookmark(projectId);
+      // refresh global user so UI everywhere updates
+      try { await refreshUser(); } catch (e) { console.warn("refreshUser failed after remove", e); }
+      // locally remove to keep UI snappy
       setBookmarkedProjects((prev) => prev.filter((p) => p.id !== projectId));
     } catch (err) {
       console.error("Failed to remove bookmark:", err);
     }
   };
 
-  const contributionProjects = []; // TODO: fetch contributions if implemented
+  const contributionProjects: UIProject[] = []; // TODO: fetch contributions if implemented
 
   if (!user) {
     return (

@@ -32,7 +32,7 @@ function InnerApp() {
   });
 
   // get auth helpers from provider
-  const { user, logout, loading: loadingProfile } = useAuth();
+  const { user, logout, loading: loadingProfile, refreshUser } = useAuth();
 
   useEffect(() => {
     if (darkMode) document.documentElement.classList.add("dark");
@@ -48,6 +48,7 @@ function InnerApp() {
    * handleBookmark:
    * - If user not logged in: open auth modal
    * - If logged in: call backend addBookmark endpoint (API will ignore duplicates)
+   * - After success, refresh user so UI updates (profile/bookmark badges / project cards)
    */
   const handleBookmark = async (projectId: string) => {
     if (!user) {
@@ -57,9 +58,20 @@ function InnerApp() {
     }
 
     try {
+      // optimistic: show toast immediately (optional)
+      showToast("Adding to bookmarks...", "info");
+
       await apiAddBookmark(projectId);
+
+      // refresh auth user so that user.bookmarks gets updated
+      try {
+        await refreshUser();
+      } catch (e) {
+        // not fatal — UI will refresh next fetch; still show success
+        console.warn("refreshUser after bookmark failed", e);
+      }
+
       showToast("Added to bookmarks", "success");
-      // let pages re-fetch their data as needed
     } catch (err: any) {
       console.error("Bookmark error:", err);
       showToast(err?.message || "Failed to bookmark project", "error");
@@ -80,14 +92,12 @@ function InnerApp() {
   };
 
   const handleLogout = async () => {
-    // call provider logout (clears token)
     try {
       await logout?.();
     } catch (e) {
       console.error("Logout error", e);
     }
     showToast("Logged out", "info");
-    // If you want to force a refresh of lists, you can do it here
   };
 
   return (

@@ -9,6 +9,7 @@ import { Sparkles } from "lucide-react";
 import { fetchProjects, syncProjects } from "../lib/api";
 import { BackendProject, mapBackendProject } from "../lib/types";
 import { getSyncLanguagesFor } from "../lib/helpers";
+import { useAuth } from "../lib/auth";
 
 interface HomeProps {
   onProjectClick: (project: UIProject) => void;
@@ -28,6 +29,8 @@ export default function Home({ onProjectClick, onBookmark }: HomeProps) {
   const [page, setPage] = useState<number>(1);
   const [perPage, setPerPage] = useState<number>(24);
   const [total, setTotal] = useState<number>(0);
+
+  const { user } = useAuth();
 
   useEffect(() => { setPage(1); }, [selectedTechs, selectedDifficulty, searchQuery, sortBy]);
 
@@ -50,7 +53,20 @@ export default function Home({ onProjectClick, onBookmark }: HomeProps) {
         });
 
         const backend = (res.projects || []) as BackendProject[];
-        const mapped = backend.map(mapBackendProject);
+        let mapped = backend.map(mapBackendProject);
+
+        // merge bookmark information from logged in user (support _id / id / githubId)
+        if (user && Array.isArray(user.bookmarks)) {
+          const bookmarkedIds = new Set(user.bookmarks.map((b: any) => (b._id ?? b.id ?? String(b.githubId))));
+          mapped = mapped.map((p) => {
+            // possible id candidates from project
+            const candidates = [ (p as any).id, (p as any)._id, String((p as any).githubId ?? "") ].filter(Boolean);
+            const isBookmarked = candidates.some((c) => bookmarkedIds.has(c));
+            return { ...p, isBookmarked };
+          });
+        } else {
+          mapped = mapped.map((p) => ({ ...p, isBookmarked: false }));
+        }
 
         if (!mounted) return;
         setProjects(mapped);
@@ -64,7 +80,7 @@ export default function Home({ onProjectClick, onBookmark }: HomeProps) {
     };
     load();
     return () => { mounted = false; };
-  }, [selectedTechs, selectedDifficulty, searchQuery, sortBy, page, perPage]);
+  }, [selectedTechs, selectedDifficulty, searchQuery, sortBy, page, perPage, user]);
 
   const handleTechToggle = (tech: string) => {
     setSelectedTechs((prev) => (prev.includes(tech) ? prev.filter((t) => t !== tech) : [...prev, tech]));
@@ -82,9 +98,7 @@ export default function Home({ onProjectClick, onBookmark }: HomeProps) {
 
   // callback from admin sync to refresh after sync finishes
   const handleAfterSync = () => {
-    // force reload current page
     setPage(1);
-    // trigger useEffect reload via changing page (set to 1)
     setTimeout(() => setPage(1), 50);
   };
 
@@ -148,7 +162,7 @@ export default function Home({ onProjectClick, onBookmark }: HomeProps) {
 
             {loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {Array.from({ length: perPage > 24 ? 8 : perPage / 3 }).map((_, i) => <SkeletonProjectCard key={i} />)}
+                {Array.from({ length: perPage > 24 ? 8 : Math.max(1, perPage / 3) }).map((_, i) => <SkeletonProjectCard key={i} />)}
               </div>
             ) : projects.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">

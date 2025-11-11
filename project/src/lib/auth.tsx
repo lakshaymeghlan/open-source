@@ -1,27 +1,23 @@
 // src/lib/auth.tsx
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { apiLogin, apiRegister } from "./api";
+import { apiLogin, apiRegister, fetchProfile } from "./api";
 
-type User = {
-  id: string;
-  name?: string;
-  email?: string;
-  avatar?: string;
-};
+type User = any | null;
 
 type AuthContextType = {
-  user: User | null;
+  user: User;
   token: string | null;
   loading: boolean;
   login: (payload: { email: string; password: string }) => Promise<void>;
   register: (payload: { name?: string; email: string; password: string }) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
+  const [user, setUser] = useState<User>(() => {
     try {
       const raw = localStorage.getItem("user");
       return raw ? JSON.parse(raw) : null;
@@ -42,13 +38,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     else localStorage.removeItem("user");
   }, [user]);
 
+  // on mount, try to refresh profile if token present
+  useEffect(() => {
+    (async () => {
+      if (!token) return;
+      setLoading(true);
+      try {
+        await refreshUser();
+      } catch (e) {
+        console.warn("Initial refreshUser failed", e);
+        setUser(null);
+        localStorage.removeItem("token");
+        setToken(null);
+      } finally {
+        setLoading(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const refreshUser = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchProfile();
+      // backend may return profile directly or wrapped, support both
+      const profile = (data && data.user) ? data.user : data;
+      setUser(profile ?? null);
+    } catch (err) {
+      setUser(null);
+      localStorage.removeItem("token");
+      setToken(null);
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const login = async ({ email, password }: { email: string; password: string }) => {
     setLoading(true);
     try {
-      const data = await apiLogin({ email, password });
-      // backend expected { token, user }
-      setToken(data.token);
-      setUser(data.user);
+      const res = await apiLogin({ email, password });
+      const t = res?.token ?? res?.accessToken ?? null;
+      if (t) setToken(t);
+      // fetch user profile
+      await refreshUser();
     } finally {
       setLoading(false);
     }
@@ -57,15 +90,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async ({ name, email, password }: { name?: string; email: string; password: string }) => {
     setLoading(true);
     try {
-      const data = await apiRegister({ name, email, password });
-      setToken(data.token);
-      setUser(data.user);
+      const res = await apiRegister({ name, email, password });
+      const t = res?.token ?? res?.accessToken ?? null;
+      if (t) setToken(t);
+      await refreshUser();
     } finally {
       setLoading(false);
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
     setToken(null);
     setUser(null);
     localStorage.removeItem("token");
@@ -73,7 +107,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, login, register, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
