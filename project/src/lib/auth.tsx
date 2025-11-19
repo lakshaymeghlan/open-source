@@ -19,21 +19,32 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User>(() => {
     try {
+      if (typeof window === "undefined") return null;
       const raw = localStorage.getItem("user");
       return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
     }
   });
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem("token"));
+  const [token, setToken] = useState<string | null>(() => {
+    try {
+      if (typeof window === "undefined") return null;
+      return localStorage.getItem("token");
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(false);
 
+  // keep localStorage in sync for token/user when they change (still fine to keep)
   useEffect(() => {
+    if (typeof window === "undefined") return;
     if (token) localStorage.setItem("token", token);
     else localStorage.removeItem("token");
   }, [token]);
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
     if (user) localStorage.setItem("user", JSON.stringify(user));
     else localStorage.removeItem("user");
   }, [user]);
@@ -48,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (e) {
         console.warn("Initial refreshUser failed", e);
         setUser(null);
-        localStorage.removeItem("token");
+        if (typeof window !== "undefined") localStorage.removeItem("token");
         setToken(null);
       } finally {
         setLoading(false);
@@ -62,11 +73,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const data = await fetchProfile();
       // backend may return profile directly or wrapped, support both
-      const profile = (data && data.user) ? data.user : data;
+      const profile = (data && (data as any).user) ? (data as any).user : data;
       setUser(profile ?? null);
     } catch (err) {
       setUser(null);
-      localStorage.removeItem("token");
+      if (typeof window !== "undefined") localStorage.removeItem("token");
       setToken(null);
       throw err;
     } finally {
@@ -78,9 +89,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const res = await apiLogin({ email, password });
-      const t = res?.token ?? res?.accessToken ?? null;
-      if (t) setToken(t);
-      // fetch user profile
+      const t = (res as any)?.token ?? (res as any)?.accessToken ?? null;
+      if (t) {
+        // set in-memory state
+        setToken(t);
+        // **also write immediately to localStorage so subsequent requests read it**
+        if (typeof window !== "undefined") localStorage.setItem("token", t);
+      }
+      // fetch user profile (this will use localStorage via getAuthHeaders)
       await refreshUser();
     } finally {
       setLoading(false);
@@ -91,8 +107,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setLoading(true);
     try {
       const res = await apiRegister({ name, email, password });
-      const t = res?.token ?? res?.accessToken ?? null;
-      if (t) setToken(t);
+      const t = (res as any)?.token ?? (res as any)?.accessToken ?? null;
+      if (t) {
+        setToken(t);
+        if (typeof window !== "undefined") localStorage.setItem("token", t);
+      }
       await refreshUser();
     } finally {
       setLoading(false);
@@ -102,8 +121,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     setToken(null);
     setUser(null);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+    }
   };
 
   return (
