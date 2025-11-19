@@ -57,7 +57,7 @@ export default function AuthModal({ isOpen, onClose, mode, onToggleMode }: AuthM
   const handleGitHubAuth = () => {
     // This assumes your backend has a GitHub OAuth endpoint (e.g., /api/auth/github)
     // which will redirect to GitHub for OAuth. If not implemented yet, replace or implement server-side.
-    window.location.href = `${import.meta.env.VITE_API_BASE || "http://localhost:5000"}/api/auth/github`;
+    window.location.href = `${import.meta.env.VITE_API_BASE || "https://open-source-hjs0.onrender.com"}/api/auth/github`;
   };
 
   return (
